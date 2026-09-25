@@ -1,0 +1,24 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: macOS version and Mac
+      placeholder: macOS 15.4, MacBook Air M2
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Hopla version
+      placeholder: 0.1.0
+  - type: textarea
+    attributes:
+      label: Screenshot or screen recording
+      description: Very welcome for anything visual.

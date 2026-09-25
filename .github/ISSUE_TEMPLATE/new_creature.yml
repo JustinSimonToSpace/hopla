@@ -1,0 +1,15 @@
+name: New creature or collection
+description: Propose an avatar, a collection or a move
+labels: [creatures]
+body:
+  - type: textarea
+    attributes:
+      label: The idea
+      description: Which collection, what it looks like, why it's fun. Sketches welcome!
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Avatar file (optional)
+      description: Paste the JSON exported by the avatar editor (Settings → Avatar → Customize…).
+      render: json
