@@ -13,6 +13,20 @@ enum PathTools {
         return CGFloat(h & 0xFFFF) / 32767.5 - 1
     }
 
+    private static func lerp(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
+        CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
+    }
+
+    private static func quad(_ a: CGPoint, _ c: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
+        lerp(lerp(a, c, t), lerp(c, b, t), t)
+    }
+
+    private static func cubic(_ a: CGPoint, _ c1: CGPoint, _ c2: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
+        lerp(quad(a, c1, c2, t), quad(c1, c2, b, t), t)
+    }
+
+    private static func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(b.x - a.x, b.y - a.y) }
+
     /// Flattens a path into polylines, one point every `step` units.
     static func polylines(_ path: CGPath, step: CGFloat) -> [(points: [CGPoint], closed: Bool)] {
         var result: [(points: [CGPoint], closed: Bool)] = []
@@ -23,43 +37,34 @@ enum PathTools {
             if current.count > 1 { result.append((current, closed)) }
             current = []
         }
-        func sample(_ length: CGFloat, _ f: (CGFloat) -> CGPoint) {
+        func sample(_ length: CGFloat, _ point: (CGFloat) -> CGPoint) {
             let n = max(1, Int(length / step))
-            for i in 1...n { current.append(f(CGFloat(i) / CGFloat(n))) }
+            for i in 1...n { current.append(point(CGFloat(i) / CGFloat(n))) }
         }
-        func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(b.x - a.x, b.y - a.y) }
 
-        path.applyWithBlock { element in
+        path.applyWithBlock { (element: UnsafePointer<CGPathElement>) -> Void in
             let e = element.pointee
             switch e.type {
             case .moveToPoint:
                 flush(false)
-                start = e.points[0]; last = start; current = [start]
+                start = e.points[0]
+                last = start
+                current = [start]
             case .addLineToPoint:
                 let a = last, b = e.points[0]
-                sample(dist(a, b)) { t in CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t) }
+                sample(distance(a, b)) { lerp(a, b, $0) }
                 last = b
             case .addQuadCurveToPoint:
                 let a = last, c = e.points[0], b = e.points[1]
-                sample(dist(a, c) + dist(c, b)) { t in
-                    let u = 1 - t
-                    return CGPoint(x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y)
-                }
+                sample(distance(a, c) + distance(c, b)) { quad(a, c, b, $0) }
                 last = b
             case .addCurveToPoint:
                 let a = last, c1 = e.points[0], c2 = e.points[1], b = e.points[2]
-                sample(dist(a, c1) + dist(c1, c2) + dist(c2, b)) { t in
-                    let u = 1 - t
-                    let x = u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x
-                    let y = u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y
-                    return CGPoint(x: x, y: y)
-                }
+                sample(distance(a, c1) + distance(c1, c2) + distance(c2, b)) { cubic(a, c1, c2, b, $0) }
                 last = b
             case .closeSubpath:
                 let a = last, b = start
-                if dist(a, b) > 0.5 {
-                    sample(dist(a, b)) { t in CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t) }
-                }
+                if distance(a, b) > 0.5 { sample(distance(a, b)) { lerp(a, b, $0) } }
                 flush(true)
                 last = start
             @unknown default:

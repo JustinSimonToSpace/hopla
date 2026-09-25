@@ -330,11 +330,13 @@ struct Figure {
         case .cleft, .seeds, .patches, .zebra, .drips, .bandages, .stars, .cracks, .chest, .eggCrack, .grooves, .rivets, .glitch, .marks, .swirl:
             return anatomyPattern
         case .ribs:
-            return [-0.62, -0.25, 0.25, 0.62].map { f in
-                let x = h * f
+            let middle: CGFloat = (body.top + bottom) / 2
+            let offsets: [CGFloat] = [-0.62, -0.25, 0.25, 0.62]
+            return offsets.map { (f: CGFloat) -> CGPath in
+                let x: CGFloat = h * f
                 let rib = CGMutablePath()
                 rib.move(to: CGPoint(x: x * 0.7, y: body.top + 5))
-                rib.addQuadCurve(to: CGPoint(x: x * 0.7, y: bottom - 3), control: CGPoint(x: x * 1.35, y: (body.top + bottom) / 2))
+                rib.addQuadCurve(to: CGPoint(x: x * 0.7, y: bottom - 3), control: CGPoint(x: x * 1.35, y: middle))
                 return rib.copy(strokingWithWidth: 2.4, lineCap: .round, lineJoin: .round, miterLimit: 10)
             }
         }
